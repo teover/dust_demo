@@ -527,7 +527,43 @@
         const isBluefy = /BluetoothBrowser/.test(navigator.userAgent) || /Bluefy/.test(navigator.userAgent);
         const loadingOverlay = document.getElementById('loadingOverlay');
         
-        document.addEventListener('DOMContentLoaded', initialize);
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeButtons = document.querySelectorAll('.time-btn');
+            
+            timeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    timeButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    
+                    const range = this.dataset.range;
+                    let maxPoints = 150;
+                    
+                    if (range === '15m') {
+                        maxPoints = 450;
+                    } else if (range === '30m') {
+                        maxPoints = 900;
+                    }
+                    
+                    if (historicalData.timestamps.length > maxPoints) {
+                        const excess = historicalData.timestamps.length - maxPoints;
+                        historicalData.pm2_5 = historicalData.pm2_5.slice(excess);
+                        historicalData.pm10 = historicalData.pm10.slice(excess);
+                        historicalData.timestamps = historicalData.timestamps.slice(excess);
+                    }
+                    
+                    historyChart.data.labels = historicalData.timestamps;
+                    historyChart.data.datasets[0].data = historicalData.pm2_5;
+                    historyChart.data.datasets[1].data = historicalData.pm10;
+                    historyChart.update();
+                });
+            });
+            
+            // Ensure overlay is hidden on page load
+            loadingOverlay.style.visibility = 'hidden';
+            
+            initialize();
+        });
         
         function initialize() {
             document.getElementById('connectButton').addEventListener('click', connectToDevice);
@@ -763,6 +799,9 @@
                 const devicePromise = navigator.bluetooth.requestDevice(requestOptions);
                 bleDevice = await Promise.race([devicePromise, timeoutPromise]);
                 
+                // Always hide loading overlay after device selection, regardless of outcome
+                loadingOverlay.style.visibility = 'hidden';
+                
                 document.getElementById('deviceInfo').textContent = 
                     `Selected device: "${bleDevice.name || 'Unnamed Device'}" (ID: ${bleDevice.id})`;
                 
@@ -804,7 +843,7 @@
                 }, isBluefy ? 3000 : 2000);
                 
             } catch (error) {
-                // Hide loading overlay
+                // Always ensure loading overlay is hidden when an error occurs
                 loadingOverlay.style.visibility = 'hidden';
                 
                 console.error('Connection error:', error);
@@ -907,6 +946,9 @@
                 updateStatus('Disconnected');
                 clearReadings();
             }
+            
+            // Ensure loading overlay is hidden if connection is lost
+            loadingOverlay.style.visibility = 'hidden';
         }
         
         async function disconnectFromDevice() {
@@ -1209,6 +1251,41 @@
                 
                 document.getElementById('pm10Marker').style.left = `${Math.min(position, 100)}%`;
             }
+        }
+        
+        function updateChart(readings) {
+            if (readings.pm2_5 === undefined || readings.pm10 === undefined) {
+                return;
+            }
+            
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+            
+            historicalData.pm2_5.push(readings.pm2_5);
+            historicalData.pm10.push(readings.pm10);
+            historicalData.timestamps.push(timeLabel);
+            
+            const maxDataPoints = 150;
+            if (historicalData.pm2_5.length > maxDataPoints) {
+                historicalData.pm2_5.shift();
+                historicalData.pm10.shift();
+                historicalData.timestamps.shift();
+            }
+            
+            let maxValue = Math.max(
+                ...historicalData.pm2_5.filter(v => v !== null && !isNaN(v)),
+                ...historicalData.pm10.filter(v => v !== null && !isNaN(v)),
+                15
+            );
+            
+            maxValue = Math.ceil(maxValue * 1.2);
+            
+            historyChart.options.scales.y.suggestedMax = maxValue;
+            
+            historyChart.data.labels = historicalData.timestamps;
+            historyChart.data.datasets[0].data = historicalData.pm2_5;
+            historyChart.data.datasets[1].data = historicalData.pm10;
+            historyChart.update('none'); // Use 'none' animation for better performance
         }
         
         function updateConnectionUI(isConnected) {
