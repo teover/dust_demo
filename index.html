@@ -736,17 +736,23 @@
                 
                 updateStatus('Scanning for devices...');
                 
+                // Try multiple scan approaches - broadened to improve discovery
                 let requestOptions;
                 
-                // Bluefy works better with simpler request options
+                // Use much more permissive options for Bluefy
                 if (isBluefy) {
+                    // Bluefy works better with simple namePrefix scanning
                     requestOptions = {
+                        // Start with just the name prefix for maximum compatibility
                         filters: [
-                            { services: [NUS_SERVICE_UUID] }
+                            { namePrefix: 'SPS30' }
                         ],
                         optionalServices: [NUS_SERVICE_UUID]
                     };
+                    
+                    console.log("Using Bluefy-optimized scan options:", requestOptions);
                 } else {
+                    // For Chrome/other browsers, try both approaches
                     requestOptions = {
                         filters: [
                             { services: [NUS_SERVICE_UUID] },
@@ -758,12 +764,17 @@
                 
                 console.log("Requesting device with options:", requestOptions);
                 
-                // On some Android devices/Bluefy, requestDevice() can be slow, so use a timeout
-                const devicePromise = navigator.bluetooth.requestDevice(requestOptions);
-                bleDevice = await devicePromise;
+                // Add explicit timeout handling
+                updateStatus('Starting Bluetooth scan...');
                 
-                // Hide loading overlay
-                loadingOverlay.style.visibility = 'hidden';
+                // Create a timeout promise that resolves after 20 seconds
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Scan timeout - no devices found')), 20000)
+                );
+                
+                // Race the device request against the timeout
+                const devicePromise = navigator.bluetooth.requestDevice(requestOptions);
+                bleDevice = await Promise.race([devicePromise, timeoutPromise]);
                 
                 document.getElementById('deviceInfo').textContent = 
                     `Selected device: "${bleDevice.name || 'Unnamed Device'}" (ID: ${bleDevice.id})`;
@@ -812,12 +823,22 @@
                 console.error('Connection error:', error);
                 
                 let errorMessage = error.message;
+                let additionalInfo = '';
                 
-                // Bluefy-specific error handling
-                if (isBluefy && error.message.includes('User cancelled')) {
-                    errorMessage = 'Device selection cancelled in Bluefy';
-                } else if (error.message.includes('User cancelled')) {
+                if (error.message.includes('User cancelled')) {
                     errorMessage = 'Device selection cancelled';
+                } else if (error.message.includes('Scan timeout')) {
+                    errorMessage = 'No devices found in scan';
+                    additionalInfo = `
+                        <div>Your device might not be visible because:</div>
+                        <ul>
+                            <li>Device is not powered on or not advertising</li>
+                            <li>Advertising parameters not compatible with Bluefy</li>
+                            <li>Location services may be disabled</li>
+                            <li>Device is out of range</li>
+                        </ul>
+                        <div>Try using nRF Connect app to verify if device is advertising.</div>
+                    `;
                 } else if (error.message.includes('GATT operation failed')) {
                     errorMessage = 'GATT connection failed - try again';
                 }
@@ -825,12 +846,14 @@
                 updateStatus('Connection failed: ' + errorMessage);
                 document.getElementById('deviceInfo').innerHTML += 
                     `<div style="color:red">Error: ${errorMessage}</div>
+                     ${additionalInfo}
                      <div>Troubleshooting steps:</div>
                      <ol>
                        <li>Ensure device is powered on and in range</li>
                        <li>Restart the device</li>
-                       <li>${isBluefy ? 'Close and reopen Bluefy' : 'Refresh this page and try again'}</li>
-                       <li>Check permissions</li>
+                       <li>${isBluefy ? 'Try "Clear BLE Cache" in Bluefy settings' : 'Refresh this page and try again'}</li>
+                       <li>Enable Location services on your phone</li>
+                       <li>Try with a different Bluetooth scanner app</li>
                      </ol>`;
                      
                 updateConnectionUI(false);
