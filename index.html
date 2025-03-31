@@ -736,33 +736,20 @@
                 
                 updateStatus('Scanning for devices...');
                 
-                // Try multiple scan approaches - broadened to improve discovery
-                let requestOptions;
+                /* 
+                 * Most reliable scan approach - using namePrefix only
+                 * The device now advertises the service UUID in the scan response
+                 * but many browsers only check the main advertising data
+                 */
+                const requestOptions = {
+                    filters: [
+                        // Try to find by name which is much more reliable across browsers
+                        { namePrefix: 'SPS30' }
+                    ],
+                    optionalServices: [NUS_SERVICE_UUID]
+                };
                 
-                // Use much more permissive options for Bluefy
-                if (isBluefy) {
-                    // Bluefy works better with simple namePrefix scanning
-                    requestOptions = {
-                        // Start with just the name prefix for maximum compatibility
-                        filters: [
-                            { namePrefix: 'SPS30' }
-                        ],
-                        optionalServices: [NUS_SERVICE_UUID]
-                    };
-                    
-                    console.log("Using Bluefy-optimized scan options:", requestOptions);
-                } else {
-                    // For Chrome/other browsers, try both approaches
-                    requestOptions = {
-                        filters: [
-                            { services: [NUS_SERVICE_UUID] },
-                            { namePrefix: 'SPS30' }
-                        ],
-                        optionalServices: [NUS_SERVICE_UUID]
-                    };
-                }
-                
-                console.log("Requesting device with options:", requestOptions);
+                console.log("Using name-based scan options:", requestOptions);
                 
                 // Add explicit timeout handling
                 updateStatus('Starting Bluetooth scan...');
