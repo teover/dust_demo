@@ -537,27 +537,58 @@
                     this.classList.add('active');
                     
                     const range = this.dataset.range;
-                    let maxPoints = 150;
                     
-                    if (range === '15m') {
-                        maxPoints = 450;
-                    } else if (range === '30m') {
-                        maxPoints = 900;
+                    // Set appropriate max points based on device and time range
+                    const isMobile = /iPhone|iPad|iPod|Android|webOS|Bluefy/i.test(navigator.userAgent);
+                    let maxPoints;
+                    
+                    if (isMobile) {
+                        // Use fewer points on mobile
+                        if (range === '15m') {
+                            maxPoints = 450;
+                        } else if (range === '30m') {
+                            maxPoints = 900;
+                        } else {
+                            maxPoints = 150;
+                        }
+                    } else {
+                        // Desktop can handle more points
+                        if (range === '15m') {
+                            maxPoints = 450;
+                        } else if (range === '30m') {
+                            maxPoints = 900;
+                        } else {
+                            maxPoints = 150;
+                        }
                     }
                     
-                    if (historicalData.timestamps.length > maxPoints) {
-                        const excess = historicalData.timestamps.length - maxPoints;
-                        historicalData.pm2_5 = historicalData.pm2_5.slice(excess);
-                        historicalData.pm10 = historicalData.pm10.slice(excess);
-                        historicalData.timestamps = historicalData.timestamps.slice(excess);
+                    try {
+                        if (historicalData.timestamps.length > maxPoints) {
+                            const excess = historicalData.timestamps.length - maxPoints;
+                            historicalData.pm2_5 = historicalData.pm2_5.slice(excess);
+                            historicalData.pm10 = historicalData.pm10.slice(excess);
+                            historicalData.timestamps = historicalData.timestamps.slice(excess);
+                        }
+                        
+                        historyChart.data.labels = historicalData.timestamps;
+                        historyChart.data.datasets[0].data = historicalData.pm2_5;
+                        historyChart.data.datasets[1].data = historicalData.pm10;
+                        historyChart.update(isMobile ? 'none' : { duration: 300 });
+                    } catch (e) {
+                        console.error("Error updating chart range:", e);
                     }
-                    
-                    historyChart.data.labels = historicalData.timestamps;
-                    historyChart.data.datasets[0].data = historicalData.pm2_5;
-                    historyChart.data.datasets[1].data = historicalData.pm10;
-                    historyChart.update();
                 });
             });
+            
+            // Handle iOS Safari bugs with canvas rendering
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                const chartContainer = document.querySelector('.chart-container');
+                if (chartContainer) {
+                    // Force Safari to properly render the canvas
+                    chartContainer.style.webkitTransform = 'translate3d(0,0,0)';
+                }
+            }
             
             // Ensure overlay is hidden on page load
             loadingOverlay.style.visibility = 'hidden';
@@ -593,14 +624,30 @@
         function initChart() {
             const ctx = document.getElementById('historyChart').getContext('2d');
             
-            const pm25Gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            pm25Gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
-            pm25Gradient.addColorStop(1, 'rgba(46, 204, 113, 0.05)');
+            // Mobile-optimized settings - use more conservative memory settings
+            const isMobile = /iPhone|iPad|iPod|Android|webOS|Bluefy/i.test(navigator.userAgent);
             
-            const pm10Gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            pm10Gradient.addColorStop(0, 'rgba(52, 152, 219, 0.4)');
-            pm10Gradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
+            // Skip gradients on mobile for performance
+            let pm25Fill, pm10Fill;
             
+            if (isMobile) {
+                pm25Fill = 'rgba(46, 204, 113, 0.2)'; // Use a static color instead of gradient
+                pm10Fill = 'rgba(52, 152, 219, 0.2)';  // Use a static color instead of gradient
+            } else {
+                // Only create gradients on desktop
+                const pm25Gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                pm25Gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
+                pm25Gradient.addColorStop(1, 'rgba(46, 204, 113, 0.05)');
+                
+                const pm10Gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                pm10Gradient.addColorStop(0, 'rgba(52, 152, 219, 0.4)');
+                pm10Gradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
+                
+                pm25Fill = pm25Gradient;
+                pm10Fill = pm10Gradient;
+            }
+            
+            // Create a more lightweight chart configuration for mobile devices
             historyChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -610,11 +657,11 @@
                             label: 'PM2.5',
                             data: [],
                             borderColor: 'rgba(46, 204, 113, 1)',
-                            backgroundColor: pm25Gradient,
-                            tension: 0.4,
-                            borderWidth: 2,
+                            backgroundColor: pm25Fill,
+                            tension: isMobile ? 0.1 : 0.4,  // Lower tension on mobile
+                            borderWidth: isMobile ? 1 : 2,   // Thinner lines on mobile
                             pointRadius: 0,
-                            pointHoverRadius: 5,
+                            pointHoverRadius: isMobile ? 3 : 5,
                             pointHoverBackgroundColor: 'rgba(46, 204, 113, 1)',
                             pointHoverBorderColor: '#fff',
                             pointHoverBorderWidth: 2,
@@ -624,11 +671,11 @@
                             label: 'PM10',
                             data: [],
                             borderColor: 'rgba(52, 152, 219, 1)',
-                            backgroundColor: pm10Gradient,
-                            tension: 0.4,
-                            borderWidth: 2,
+                            backgroundColor: pm10Fill,
+                            tension: isMobile ? 0.1 : 0.4,  // Lower tension on mobile
+                            borderWidth: isMobile ? 1 : 2,   // Thinner lines on mobile
                             pointRadius: 0,
-                            pointHoverRadius: 5,
+                            pointHoverRadius: isMobile ? 3 : 5,
                             pointHoverBackgroundColor: 'rgba(52, 152, 219, 1)',
                             pointHoverBorderColor: '#fff',
                             pointHoverBorderWidth: 2,
@@ -644,20 +691,24 @@
                         axis: 'x',
                         intersect: false
                     },
+                    // iOS Safari optimization: limit the canvas size
+                    devicePixelRatio: isMobile ? 1 : window.devicePixelRatio,
                     scales: {
                         y: {
                             beginAtZero: true,
                             title: {
-                                display: true,
+                                display: !isMobile, // Hide on mobile
                                 text: 'µg/m³',
                                 color: '#95a5a6'
                             },
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.05)',
-                                drawBorder: false
+                                drawBorder: false,
+                                display: !isMobile // Hide grid on mobile
                             },
                             ticks: {
-                                color: '#95a5a6'
+                                color: '#95a5a6',
+                                maxTicksLimit: isMobile ? 5 : 10 // Fewer ticks on mobile
                             },
                             suggestedMax: 50
                         },
@@ -671,18 +722,26 @@
                             },
                             ticks: {
                                 color: '#95a5a6',
-                                maxRotation: 0
+                                maxRotation: 0,
+                                // Fewer labels on mobile
+                                maxTicksLimit: isMobile ? 5 : 10,
+                                // Only show every Nth label on mobile
+                                callback: function(val, index) {
+                                    return isMobile ? (index % 3 === 0 ? this.getLabelForValue(val) : '') : this.getLabelForValue(val);
+                                }
                             }
                         }
                     },
+                    // Minimize animations on mobile
                     animation: {
-                        duration: 300
+                        duration: isMobile ? 0 : 300
                     },
                     plugins: {
                         legend: {
                             display: false
                         },
                         tooltip: {
+                            enabled: !isMobile, // Disable tooltips on mobile for better performance
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
                             titleColor: '#fff',
                             bodyColor: '#fff',
@@ -708,7 +767,7 @@
                             }
                         },
                         annotation: {
-                            annotations: {
+                            annotations: isMobile ? {} : { // Disable annotations on mobile
                                 pm25Line: {
                                     type: 'line',
                                     yMin: 12,
@@ -1254,38 +1313,67 @@
         }
         
         function updateChart(readings) {
-            if (readings.pm2_5 === undefined || readings.pm10 === undefined) {
+            if (readings.pm2_5 === undefined || readings.pm10 === undefined || !historyChart) {
                 return;
             }
             
-            const now = new Date();
-            const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
-            
-            historicalData.pm2_5.push(readings.pm2_5);
-            historicalData.pm10.push(readings.pm10);
-            historicalData.timestamps.push(timeLabel);
-            
-            const maxDataPoints = 150;
-            if (historicalData.pm2_5.length > maxDataPoints) {
-                historicalData.pm2_5.shift();
-                historicalData.pm10.shift();
-                historicalData.timestamps.shift();
+            try {
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+                
+                // Limit data points more aggressively on mobile devices
+                const isMobile = /iPhone|iPad|iPod|Android|webOS|Bluefy/i.test(navigator.userAgent);
+                const maxDataPoints = isMobile ? 30 : 150;
+                
+                historicalData.pm2_5.push(readings.pm2_5);
+                historicalData.pm10.push(readings.pm10);
+                historicalData.timestamps.push(timeLabel);
+                
+                if (historicalData.pm2_5.length > maxDataPoints) {
+                    historicalData.pm2_5.shift();
+                    historicalData.pm10.shift();
+                    historicalData.timestamps.shift();
+                }
+                
+                let maxValue = 15; // Start with minimum max value
+                
+                // Safely calculate max value
+                try {
+                    const validPm25 = historicalData.pm2_5.filter(v => v !== null && !isNaN(v));
+                    const validPm10 = historicalData.pm10.filter(v => v !== null && !isNaN(v));
+                    
+                    if (validPm25.length > 0 || validPm10.length > 0) {
+                        maxValue = Math.max(
+                            validPm25.length > 0 ? Math.max(...validPm25) : 0,
+                            validPm10.length > 0 ? Math.max(...validPm10) : 0,
+                            15
+                        );
+                    }
+                } catch (e) {
+                    console.warn("Error calculating max value:", e);
+                }
+                
+                maxValue = Math.ceil(maxValue * 1.2);
+                
+                // Safely update chart
+                if (historyChart.options && historyChart.options.scales && historyChart.options.scales.y) {
+                    historyChart.options.scales.y.suggestedMax = maxValue;
+                }
+                
+                historyChart.data.labels = historicalData.timestamps;
+                historyChart.data.datasets[0].data = historicalData.pm2_5;
+                historyChart.data.datasets[1].data = historicalData.pm10;
+                
+                // Use minimal or no animation
+                historyChart.update(isMobile ? 'none' : { duration: 0 });
+            } catch (e) {
+                console.error("Error updating chart:", e);
+                // Fallback for chart error - create a basic chart
+                if (e.message && e.message.includes("canvas")) {
+                    console.log("Attempting to reinitialize chart due to canvas error");
+                    setTimeout(initChart, 1000);
+                }
             }
-            
-            let maxValue = Math.max(
-                ...historicalData.pm2_5.filter(v => v !== null && !isNaN(v)),
-                ...historicalData.pm10.filter(v => v !== null && !isNaN(v)),
-                15
-            );
-            
-            maxValue = Math.ceil(maxValue * 1.2);
-            
-            historyChart.options.scales.y.suggestedMax = maxValue;
-            
-            historyChart.data.labels = historicalData.timestamps;
-            historyChart.data.datasets[0].data = historicalData.pm2_5;
-            historyChart.data.datasets[1].data = historicalData.pm10;
-            historyChart.update('none'); // Use 'none' animation for better performance
         }
         
         function updateConnectionUI(isConnected) {
