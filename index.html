@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIMMS Dust</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--dark-color);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .app-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            font-weight: 600;
+            background-color: rgba(52, 152, 219, 0.05);
+            border-bottom: none;
+        }
+        
+        .reading-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .reading-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease;
+        }
+        
+        .reading-item:hover {
+            transform: scale(1.03);
+        }
+        
+        .reading-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .reading-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .reading-unit {
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-connected {
+            background-color: var(--secondary-color);
+        }
+        
+        .status-disconnected {
+            background-color: var(--danger-color);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+            border-color: #27ae60;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+            border-color: #c0392b;
+        }
+        
+        .command-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .chart-container {
+            height: 300px;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .chart-legend {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 5px;
+        }
+        
+        .chart-time-range {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .time-btn {
+            border: none;
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--primary-color);
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .time-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .grafana-tooltip {
+            background-color: rgba(0, 0, 0, 0.85) !important;
+            border-radius: 3px !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+            padding: 10px !important;
+            border-left: 3px solid #5794f2 !important;
+            color: white !important;
+        }
+        
+        .raw-data-indicator {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid var(--primary-color);
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .air-quality-indicator {
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 5px;
+            background: linear-gradient(to right, #2ecc71, #f39c12, #e74c3c);
+        }
+        
+        .air-quality-marker {
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border: 2px solid #333;
+            border-radius: 50%;
+            position: relative;
+            top: -9px;
+            transition: left 0.5s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .reading-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .command-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <h1><i class="bi bi-cloud"></i> VIMMS Dust monitoring system</h1>
+            <p>Real-time particulate matter monitoring</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span>Trends</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-toolbar">
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: rgba(46, 204, 113, 1)"></div>
+                            <span>PM2.5</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: rgba(52, 152, 219, 1)"></div>
+                            <span>PM10</span>
+                        </div>
+                    </div>
+                    <div class="chart-time-range">
+                        <button class="time-btn active" data-range="5m">5m</button>
+                        <button class="time-btn" data-range="15m">15m</button>
+                        <button class="time-btn" data-range="30m">30m</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Connection Status</span>
+                <div>
+                    <span id="connectionStatus">
+                        <span class="status-indicator status-disconnected"></span>
+                        Disconnected
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <button id="connectButton" class="btn btn-primary">
+                    <i class="bi bi-bluetooth"></i> Connect to device
+                </button>
+                
+                <div class="command-buttons">
+                    <button id="resetButton" class="btn btn-outline-secondary" disabled>
+                        <i class="bi bi-arrow-clockwise"></i> Reset Sensor
+                    </button>
+                    <button id="cleanButton" class="btn btn-outline-secondary" disabled>
+                        <i class="bi bi-fan"></i> Clean Fan
+                    </button>
+                    <button id="infoButton" class="btn btn-outline-secondary" disabled>
+                        <i class="bi bi-info-circle"></i> Get Info
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Particulate Matter (PM)</span>
+                <small id="lastUpdateTime">Last update: --:--:--</small>
+            </div>
+            <div class="card-body">
+                <div class="reading-grid">
+                    <div class="reading-item">
+                        <div class="reading-label">PM1.0</div>
+                        <div id="pm1_0" class="reading-value">-</div>
+                        <div class="reading-unit">µg/m³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">PM2.5</div>
+                        <div id="pm2_5" class="reading-value">-</div>
+                        <div class="reading-unit">µg/m³</div>
+                        <div class="air-quality-indicator">
+                            <div id="pm25Marker" class="air-quality-marker" style="left: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">PM4.0</div>
+                        <div id="pm4_0" class="reading-value">-</div>
+                        <div class="reading-unit">µg/m³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">PM10</div>
+                        <div id="pm10" class="reading-value">-</div>
+                        <div class="reading-unit">µg/m³</div>
+                        <div class="air-quality-indicator">
+                            <div id="pm10Marker" class="air-quality-marker" style="left: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">Typical Size</div>
+                        <div id="typical_size" class="reading-value">-</div>
+                        <div class="reading-unit">µm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span>Number Concentration</span>
+            </div>
+            <div class="card-body">
+                <div class="reading-grid">
+                    <div class="reading-item">
+                        <div class="reading-label">NC0.5</div>
+                        <div id="nc0_5" class="reading-value">-</div>
+                        <div class="reading-unit">#/cm³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">NC1.0</div>
+                        <div id="nc1_0" class="reading-value">-</div>
+                        <div class="reading-unit">#/cm³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">NC2.5</div>
+                        <div id="nc2_5" class="reading-value">-</div>
+                        <div class="reading-unit">#/cm³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">NC4.0</div>
+                        <div id="nc4_0" class="reading-value">-</div>
+                        <div class="reading-unit">#/cm³</div>
+                    </div>
+                    <div class="reading-item">
+                        <div class="reading-label">NC10</div>
+                        <div id="nc10" class="reading-value">-</div>
+                        <div class="reading-unit">#/cm³</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span>Device Information</span>
+            </div>
+            <div class="card-body">
+                <div id="deviceInfo" class="mb-2">No information available yet.</div>
+                <div id="rawDataStatus" class="raw-data-indicator">Waiting for data...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <script>
+        const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const NUS_RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+        const NUS_TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+        
+        let bleDevice;
+        let nusTxCharacteristic;
+        let nusRxCharacteristic;
+        let connected = false;
+        
+        let historyChart;
+        let historicalData = {
+            pm2_5: [],
+            pm10: [],
+            timestamps: []
+        };
+        
+        document.addEventListener('DOMContentLoaded', initialize);
+        
+        function initialize() {
+            document.getElementById('connectButton').addEventListener('click', connectToDevice);
+            document.getElementById('resetButton').addEventListener('click', sendCommand.bind(null, 'reset'));
+            document.getElementById('cleanButton').addEventListener('click', sendCommand.bind(null, 'clean'));
+            document.getElementById('infoButton').addEventListener('click', sendCommand.bind(null, 'info'));
+            
+            initChart();
+            
+            if (!navigator.bluetooth) {
+                alert('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
+                document.getElementById('connectButton').disabled = true;
+                updateStatus('Bluetooth not supported');
+            }
+        }
+        
+        function initChart() {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            
+            const pm25Gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            pm25Gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
+            pm25Gradient.addColorStop(1, 'rgba(46, 204, 113, 0.05)');
+            
+            const pm10Gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            pm10Gradient.addColorStop(0, 'rgba(52, 152, 219, 0.4)');
+            pm10Gradient.addColorStop(1, 'rgba(52, 152, 219, 0.05)');
+            
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'PM2.5',
+                            data: [],
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            backgroundColor: pm25Gradient,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointHoverBackgroundColor: 'rgba(46, 204, 113, 1)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2,
+                            fill: true
+                        },
+                        {
+                            label: 'PM10',
+                            data: [],
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: pm10Gradient,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointHoverBackgroundColor: 'rgba(52, 152, 219, 1)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'µg/m³',
+                                color: '#95a5a6'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#95a5a6'
+                            },
+                            suggestedMax: 50
+                        },
+                        x: {
+                            title: {
+                                display: false
+                            },
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#95a5a6',
+                                maxRotation: 0
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: {
+                                size: 13,
+                                weight: 'normal'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            padding: 10,
+                            cornerRadius: 3,
+                            displayColors: true,
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    return tooltipItems[0].label;
+                                },
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${label}: ${value.toFixed(1)} µg/m³`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                pm25Line: {
+                                    type: 'line',
+                                    yMin: 12,
+                                    yMax: 12,
+                                    borderColor: 'rgba(255, 193, 7, 0.5)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: 'PM2.5 WHO Guideline',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                                        color: '#000',
+                                        font: {
+                                            size: 10
+                                        }
+                                    }
+                                },
+                                pm10Line: {
+                                    type: 'line',
+                                    yMin: 45,
+                                    yMax: 45,
+                                    borderColor: 'rgba(255, 87, 34, 0.5)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: 'PM10 WHO Guideline',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(255, 87, 34, 0.7)',
+                                        color: '#000',
+                                        font: {
+                                            size: 10
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChart(readings) {
+            if (readings.pm2_5 === undefined || readings.pm10 === undefined) {
+                return;
+            }
+            
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+            
+            historicalData.pm2_5.push(readings.pm2_5);
+            historicalData.pm10.push(readings.pm10);
+            historicalData.timestamps.push(timeLabel);
+            
+            const maxDataPoints = 150;
+            if (historicalData.pm2_5.length > maxDataPoints) {
+                historicalData.pm2_5.shift();
+                historicalData.pm10.shift();
+                historicalData.timestamps.shift();
+            }
+            
+            let maxValue = Math.max(
+                ...historicalData.pm2_5.filter(v => v !== null && !isNaN(v)),
+                ...historicalData.pm10.filter(v => v !== null && !isNaN(v)),
+                15
+            );
+            
+            maxValue = Math.ceil(maxValue * 1.2);
+            
+            historyChart.options.scales.y.suggestedMax = maxValue;
+            
+            historyChart.data.labels = historicalData.timestamps;
+            historyChart.data.datasets[0].data = historicalData.pm2_5;
+            historyChart.data.datasets[1].data = historicalData.pm10;
+            historyChart.update();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeButtons = document.querySelectorAll('.time-btn');
+            
+            timeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    timeButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    
+                    const range = this.dataset.range;
+                    let maxPoints = 150;
+                    
+                    if (range === '15m') {
+                        maxPoints = 450;
+                    } else if (range === '30m') {
+                        maxPoints = 900;
+                    }
+                    
+                    if (historicalData.timestamps.length > maxPoints) {
+                        const excess = historicalData.timestamps.length - maxPoints;
+                        historicalData.pm2_5 = historicalData.pm2_5.slice(excess);
+                        historicalData.pm10 = historicalData.pm10.slice(excess);
+                        historicalData.timestamps = historicalData.timestamps.slice(excess);
+                    }
+                    
+                    historyChart.data.labels = historicalData.timestamps;
+                    historyChart.data.datasets[0].data = historicalData.pm2_5;
+                    historyChart.data.datasets[1].data = historicalData.pm10;
+                    historyChart.update();
+                });
+            });
+            
+            initialize();
+        });
+
+        async function connectToDevice() {
+            if (connected) {
+                await disconnectFromDevice();
+                return;
+            }
+            
+            try {
+                updateStatus('Preparing to scan for devices...');
+                document.getElementById('deviceInfo').innerHTML = 
+                    `<div>Web Bluetooth Support Check:</div>
+                     <div>- navigator.bluetooth: ${navigator.bluetooth ? 'YES' : 'NO'}</div>
+                     <div>- requestDevice: ${navigator.bluetooth && navigator.bluetooth.requestDevice ? 'YES' : 'NO'}</div>
+                     <div>- Browser: ${navigator.userAgent}</div>`;
+                updateStatus('Scanning for devices...');
+                
+                const requestOptions = {
+                    filters: [
+                        { services: [NUS_SERVICE_UUID] },
+                        { namePrefix: 'SPS30' }
+                    ],
+                    optionalServices: [NUS_SERVICE_UUID]
+                };
+                
+                console.log("Requesting device with options:", requestOptions);
+                
+                bleDevice = await navigator.bluetooth.requestDevice(requestOptions);
+                
+                document.getElementById('deviceInfo').textContent = 
+                    `Selected device: "${bleDevice.name}" (ID: ${bleDevice.id})`;
+                
+                bleDevice.addEventListener('gattserverdisconnected', handleDisconnection);
+                
+                updateStatus('Connecting to ' + bleDevice.name + '...');
+                
+                const server = await connectWithRetry(bleDevice);
+                
+                document.getElementById('deviceInfo').innerHTML = 
+                    `<div>Connected to: ${bleDevice.name}</div>
+                     <div>Device ID: ${bleDevice.id}</div>
+                     <div>Connection state: ${server.connected ? 'Connected' : 'Disconnected'}</div>`;
+                
+                updateStatus('Finding Nordic UART Service...');
+                const service = await server.getPrimaryService(NUS_SERVICE_UUID);
+                
+                updateStatus('Getting UART characteristics...');
+                nusTxCharacteristic = await service.getCharacteristic(NUS_TX_UUID);
+                nusRxCharacteristic = await service.getCharacteristic(NUS_RX_UUID);
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                updateStatus('Enabling notifications...');
+                await nusTxCharacteristic.startNotifications();
+                nusTxCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
+                
+                connected = true;
+                updateConnectionUI(true);
+                updateStatus('Connected to ' + bleDevice.name);
+                
+                setTimeout(() => {
+                    sendCommand('info');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Connection error:', error);
+                
+                let errorMessage = error.message;
+                if (error.message.includes('User cancelled')) {
+                    errorMessage = 'Device selection cancelled';
+                } else if (error.message.includes('GATT operation failed')) {
+                    errorMessage = 'GATT connection failed - try refreshing the page and reconnecting';
+                }
+                
+                updateStatus('Connection failed: ' + errorMessage);
+                document.getElementById('deviceInfo').innerHTML += 
+                    `<div style="color:red">Error: ${errorMessage}</div>
+                     <div>If the device doesn't appear in the Bluetooth list, try these steps:</div>
+                     <ol>
+                       <li>Ensure the device is powered on and in range</li>
+                       <li>Restart the device</li>
+                       <li>Refresh this page and try again</li>
+                       <li>Check browser permissions</li>
+                       <li>Try using Chrome or Edge browser</li>
+                     </ol>`;
+                     
+                updateConnectionUI(false);
+            }
+        }
+        
+        async function connectWithRetry(device, maxRetries = 3) {
+            let attempts = 0;
+            
+            while (attempts < maxRetries) {
+                try {
+                    attempts++;
+                    updateStatus(`Connection attempt ${attempts}/${maxRetries}...`);
+                    
+                    const server = await device.gatt.connect();
+                    console.log("GATT connection successful");
+                    return server;
+                } catch (error) {
+                    console.error(`Connection attempt ${attempts} failed:`, error);
+                    
+                    if (attempts >= maxRetries) {
+                        throw error;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
+        
+        function handleDisconnection(event) {
+            console.log("Disconnection event:", event);
+            
+            if (connected) {
+                updateStatus('Connection lost, attempting to reconnect...');
+                
+                setTimeout(async () => {
+                    try {
+                        if (bleDevice) {
+                            const server = await connectWithRetry(bleDevice, 2);
+                            if (server) {
+                                const service = await server.getPrimaryService(NUS_SERVICE_UUID);
+                                nusTxCharacteristic = await service.getCharacteristic(NUS_TX_UUID);
+                                nusRxCharacteristic = await service.getCharacteristic(NUS_RX_UUID);
+                                
+                                await nusTxCharacteristic.startNotifications();
+                                nusTxCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
+                                
+                                updateStatus('Reconnected to ' + bleDevice.name);
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Reconnection failed:', error);
+                    }
+                    
+                    connected = false;
+                    updateConnectionUI(false);
+                    updateStatus('Disconnected');
+                    clearReadings();
+                }, 1000);
+            } else {
+                connected = false;
+                updateConnectionUI(false);
+                updateStatus('Disconnected');
+                clearReadings();
+            }
+        }
+        
+        async function disconnectFromDevice() {
+            try {
+                if (bleDevice && bleDevice.gatt.connected) {
+                    await bleDevice.gatt.disconnect();
+                }
+            } catch (error) {
+                console.error('Error disconnecting:', error);
+            } finally {
+                connected = false;
+                updateConnectionUI(false);
+                updateStatus('Disconnected');
+            }
+        }
+        
+        function clearReadings() {
+            const elements = [
+                'pm1_0', 'pm2_5', 'pm4_0', 'pm10', 'typical_size',
+                'nc0_5', 'nc1_0', 'nc2_5', 'nc4_0', 'nc10'
+            ];
+            
+            elements.forEach(id => {
+                document.getElementById(id).textContent = '-';
+            });
+            
+            document.getElementById('pm25Marker').style.left = '0%';
+            document.getElementById('pm10Marker').style.left = '0%';
+            
+            document.getElementById('lastUpdateTime').textContent = 'Last update: --:--:--';
+            document.getElementById('rawDataStatus').textContent = 'Waiting for data...';
+        }
+        
+        async function sendCommand(command) {
+            if (!connected || !nusRxCharacteristic) {
+                console.error('Not connected');
+                return;
+            }
+            
+            try {
+                updateStatus(`Sending command: ${command}...`);
+                
+                const encoder = new TextEncoder();
+                const data = encoder.encode(command);
+                
+                await nusRxCharacteristic.writeValue(data);
+                updateStatus(`Command sent: ${command}`);
+            } catch (error) {
+                console.error('Error sending command:', error);
+                updateStatus('Command failed: ' + error.message);
+            }
+        }
+        
+        function handleIncomingData(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder();
+            const data = decoder.decode(value);
+            
+            console.log('Received data:', data);
+            
+            if (data.startsWith('SPS30 SN:')) {
+                document.getElementById('deviceInfo').textContent = data;
+                return;
+            }
+            
+            if (data.startsWith('RAW:')) {
+                handleRawData(data);
+                return;
+            }
+            
+            try {
+                const readings = parseCompactFormat(data);
+                if (Object.keys(readings).length > 0) {
+                    updateReadings(readings);
+                }
+            } catch (error) {
+                console.error('Error parsing data:', error);
+            }
+        }
+        
+        function parseCompactFormat(data) {
+            const readings = {};
+            try {
+                if (data.includes('{') && data.includes('}')) {
+                    const jsonData = JSON.parse(data);
+                    
+                    if (jsonData.pm && Array.isArray(jsonData.pm) && jsonData.pm.length >= 4) {
+                        readings.pm1_0 = jsonData.pm[0] / 100;
+                        readings.pm2_5 = jsonData.pm[1] / 100;
+                        readings.pm4_0 = jsonData.pm[2] / 100;
+                        readings.pm10 = jsonData.pm[3] / 100;
+                    }
+                    
+                    if (jsonData.nc && Array.isArray(jsonData.nc) && jsonData.nc.length >= 5) {
+                        readings.nc0_5 = jsonData.nc[0] / 100;
+                        readings.nc1_0 = jsonData.nc[1] / 100;
+                        readings.nc2_5 = jsonData.nc[2] / 100;
+                        readings.nc4_0 = jsonData.nc[3] / 100;
+                        readings.nc10 = jsonData.nc[4] / 100;
+                    }
+                    
+                    if (jsonData.ts !== undefined) {
+                        readings.typical_size = jsonData.ts / 100;
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing compact format:', error);
+            }
+            
+            return readings;
+        }
+        
+        function parseSps30RawData(rawMessage) {
+            if (!rawMessage.startsWith('RAW:')) {
+                return null;
+            }
+            
+            console.log("Processing raw data:", rawMessage);
+            
+            let parts;
+            let validMask = 0x03FF;
+            let hexData = '';
+            
+            parts = rawMessage.split(':');
+            
+            if (parts.length >= 3) {
+                try {
+                    validMask = parseInt(parts[1], 16);
+                    hexData = parts[2];
+                    console.log(`Found standard format. Mask: 0x${validMask.toString(16)}, Data: ${hexData}`);
+                } catch (e) {
+                    console.warn("Error parsing mask:", e);
+                    validMask = 0x03FF;
+                }
+            } else if (parts.length === 2) {
+                console.log("Found format without mask");
+                hexData = parts[1];
+            } else {
+                console.warn("Unexpected format - trying to extract data");
+                hexData = rawMessage.substring(4);
+            }
+            
+            let valueStrings = [];
+            if (hexData.includes('.')) {
+                valueStrings = hexData.split('.');
+                console.log(`Found ${valueStrings.length} dot-separated values`);
+            } else {
+                console.log("No dots found in data, assuming continuous format");
+                return null;
+            }
+            
+            const values = [];
+            
+            for (let i = 0; i < valueStrings.length; i++) {
+                try {
+                    const hexValue = valueStrings[i];
+                    if (hexValue.length < 8) {
+                        console.warn(`Value ${i} has insufficient length: ${hexValue}`);
+                        values.push(0);
+                        continue;
+                    }
+                    
+                    const bytes = new Uint8Array(4);
+                    for (let j = 0; j < 4; j++) {
+                        const byteIndex = j * 2;
+                        if (byteIndex + 1 < hexValue.length) {
+                            bytes[j] = parseInt(hexValue.substring(byteIndex, byteIndex + 2), 16);
+                        } else {
+                            bytes[j] = 0;
+                        }
+                    }
+                    
+                    const buffer = bytes.buffer;
+                    const view = new DataView(buffer);
+                    
+                    const floatValue = view.getFloat32(0, false);
+                    
+                    console.log(`Value ${i} parsed: ${floatValue}`);
+                    
+                    if (!isNaN(floatValue) && isFinite(floatValue)) {
+                        values.push(floatValue);
+                    } else {
+                        console.warn(`Invalid float value at position ${i}: ${floatValue}`);
+                        values.push(0);
+                    }
+                } catch (err) {
+                    console.error(`Error parsing value ${i}:`, err);
+                    values.push(0);
+                }
+            }
+            
+            while (values.length < 10) {
+                values.push(0);
+            }
+            
+            return {
+                pm1_0: values[0],
+                pm2_5: values[1],
+                pm4_0: values[2],
+                pm10: values[3],
+                nc0_5: values[4],
+                nc1_0: values[5],
+                nc2_5: values[6],
+                nc4_0: values[7],
+                nc10: values[8],
+                typical_size: values[9]
+            };
+        }
+        
+        function handleRawData(rawData) {
+            try {
+                console.log("Raw data received:", rawData);
+                
+                const sensorData = parseSps30RawData(rawData);
+                if (sensorData) {
+                    document.getElementById('rawDataStatus').textContent = 
+                        `Raw data received (${new Date().toLocaleTimeString()})`;
+                    
+                    updateReadings(sensorData);
+                } else {
+                    console.error("Failed to parse raw data");
+                }
+            } catch (error) {
+                console.error('Error handling raw data:', error);
+            }
+        }
+        
+        function updateReadings(readings) {
+            function updateElement(id, value) {
+                if (value !== undefined && value !== null) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent = value.toFixed(1);
+                    }
+                }
+            }
+            
+            updateElement('pm1_0', readings.pm1_0);
+            updateElement('pm2_5', readings.pm2_5);
+            updateElement('pm4_0', readings.pm4_0);
+            updateElement('pm10', readings.pm10);
+            
+            updateElement('nc0_5', readings.nc0_5);
+            updateElement('nc1_0', readings.nc1_0);
+            updateElement('nc2_5', readings.nc2_5);
+            updateElement('nc4_0', readings.nc4_0);
+            updateElement('nc10', readings.nc10);
+            
+            updateElement('typical_size', readings.typical_size);
+            
+            updateAirQualityIndicators(readings);
+            
+            const now = new Date();
+            document.getElementById('lastUpdateTime').textContent = 
+                `Last update: ${now.toLocaleTimeString()}`;
+            
+            if (readings.pm2_5 !== undefined && readings.pm2_5 !== null && 
+                readings.pm10 !== undefined && readings.pm10 !== null) {
+                updateChart(readings);
+            }
+        }
+        
+        function updateAirQualityIndicators(readings) {
+            if (readings.pm2_5 !== undefined && readings.pm2_5 !== null) {
+                const pm25 = readings.pm2_5;
+                let position;
+                
+                if (pm25 <= 12) {
+                    position = (pm25 / 12) * 25;
+                } else if (pm25 <= 35) {
+                    position = 25 + ((pm25 - 12) / (35 - 12)) * 25;
+                } else if (pm25 <= 150) {
+                    position = 50 + ((pm25 - 35) / (150 - 35)) * 50;
+                } else {
+                    position = 100;
+                }
+                
+                document.getElementById('pm25Marker').style.left = `${Math.min(position, 100)}%`;
+            }
+            
+            if (readings.pm10 !== undefined && readings.pm10 !== null) {
+                const pm10 = readings.pm10;
+                let position;
+                
+                if (pm10 <= 54) {
+                    position = (pm10 / 54) * 25;
+                } else if (pm10 <= 154) {
+                    position = 25 + ((pm10 - 54) / (154 - 54)) * 25;
+                } else if (pm10 <= 350) {
+                    position = 50 + ((pm10 - 154) / (350 - 154)) * 50;
+                } else {
+                    position = 100;
+                }
+                
+                document.getElementById('pm10Marker').style.left = `${Math.min(position, 100)}%`;
+            }
+        }
+        
+        function updateConnectionUI(isConnected) {
+            const connectButton = document.getElementById('connectButton');
+            const resetButton = document.getElementById('resetButton');
+            const cleanButton = document.getElementById('cleanButton');
+            const infoButton = document.getElementById('infoButton');
+            const statusIndicator = document.getElementById('connectionStatus');
+            
+            if (isConnected) {
+                connectButton.textContent = 'Disconnect';
+                connectButton.classList.remove('btn-primary');
+                connectButton.classList.add('btn-danger');
+                connectButton.innerHTML = '<i class="bi bi-bluetooth"></i> Disconnect';
+                
+                resetButton.disabled = false;
+                cleanButton.disabled = false;
+                infoButton.disabled = false;
+                
+                statusIndicator.innerHTML = 
+                    '<span class="status-indicator status-connected"></span> Connected';
+            } else {
+                connectButton.textContent = 'Connect to Device';
+                connectButton.classList.remove('btn-danger');
+                connectButton.classList.add('btn-primary');
+                connectButton.innerHTML = '<i class="bi bi-bluetooth"></i> Connect to Device';
+                
+                resetButton.disabled = true;
+                cleanButton.disabled = true;
+                infoButton.disabled = true;
+                
+                statusIndicator.innerHTML = 
+                    '<span class="status-indicator status-disconnected"></span> Disconnected';
+            }
+        }
+        
+        function updateStatus(message) {
+            const statusIndicator = document.getElementById('connectionStatus');
+            const statusClass = connected ? 'status-connected' : 'status-disconnected';
+            
+            if (statusIndicator) {
+                statusIndicator.innerHTML = 
+                    `<span class="status-indicator ${statusClass}"></span> ${message}`;
+            }
+            console.log('Status:', message);
+        }
+    </script>
+</body>
+</html>
