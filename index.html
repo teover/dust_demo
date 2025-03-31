@@ -2,10 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VIMMS Dust</title>
+    
+    <!-- Bluefy optimization - preconnect to CDNs -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- Standard stylesheets -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <!-- Bluefy browser compatibility meta tag -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#3498db">
+    
     <style>
         :root {
             --primary-color: #3498db;
@@ -22,6 +32,8 @@
             color: var(--dark-color);
             margin: 0;
             padding: 0;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
         }
         
         .app-container {
@@ -264,9 +276,77 @@
                 flex-direction: column;
             }
         }
+        
+        /* Add Bluefy-specific styles for better mobile experience */
+        @media (max-width: 576px) {
+            .app-container {
+                padding: 10px;
+            }
+            
+            .card {
+                margin-bottom: 15px;
+            }
+            
+            .reading-value {
+                font-size: 1.6rem;
+            }
+            
+            /* Fix for Bluefy's known issues with hover states */
+            .card:hover {
+                transform: none;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            }
+            
+            .reading-item:hover {
+                transform: none;
+            }
+            
+            /* Increase button tap target size for mobile */
+            .btn {
+                padding: 10px 15px;
+                margin-bottom: 5px;
+            }
+        }
+        
+        /* Add a loading overlay for Bluefy's slower BLE operations */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .ble-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
+    <!-- Loading overlay for Bluefy's longer BLE operations -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <div class="app-container">
         <div class="app-header">
             <h1><i class="bi bi-cloud"></i> VIMMS Dust monitoring system</h1>
@@ -326,6 +406,12 @@
                     <button id="infoButton" class="btn btn-outline-secondary" disabled>
                         <i class="bi bi-info-circle"></i> Get Info
                     </button>
+                </div>
+                
+                <!-- Bluefy browser specific information -->
+                <div class="ble-info" id="bluefyInfo">
+                    <div><strong>Browser:</strong> <span id="browserInfo">Checking...</span></div>
+                    <div><strong>BLE Support:</strong> <span id="bleSupport">Checking...</span></div>
                 </div>
             </div>
         </div>
@@ -437,6 +523,10 @@
             timestamps: []
         };
         
+        // Add Bluefy detection
+        const isBluefy = /BluetoothBrowser/.test(navigator.userAgent) || /Bluefy/.test(navigator.userAgent);
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        
         document.addEventListener('DOMContentLoaded', initialize);
         
         function initialize() {
@@ -451,6 +541,16 @@
                 alert('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
                 document.getElementById('connectButton').disabled = true;
                 updateStatus('Bluetooth not supported');
+            }
+            
+            // Update browser info
+            document.getElementById('browserInfo').textContent = isBluefy ? 'Bluefy' : navigator.userAgent;
+            document.getElementById('bleSupport').textContent = navigator.bluetooth ? 'Supported ✓' : 'Not Supported ✗';
+            
+            // Optimize for Bluefy
+            if (isBluefy) {
+                // Bluefy already has UI indicating scan status, so hide our overlay
+                document.getElementById('bluefyInfo').innerHTML += '<div>Bluefy Browser detected - using optimized settings</div>';
             }
         }
         
@@ -616,76 +716,6 @@
             });
         }
         
-        function updateChart(readings) {
-            if (readings.pm2_5 === undefined || readings.pm10 === undefined) {
-                return;
-            }
-            
-            const now = new Date();
-            const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
-            
-            historicalData.pm2_5.push(readings.pm2_5);
-            historicalData.pm10.push(readings.pm10);
-            historicalData.timestamps.push(timeLabel);
-            
-            const maxDataPoints = 150;
-            if (historicalData.pm2_5.length > maxDataPoints) {
-                historicalData.pm2_5.shift();
-                historicalData.pm10.shift();
-                historicalData.timestamps.shift();
-            }
-            
-            let maxValue = Math.max(
-                ...historicalData.pm2_5.filter(v => v !== null && !isNaN(v)),
-                ...historicalData.pm10.filter(v => v !== null && !isNaN(v)),
-                15
-            );
-            
-            maxValue = Math.ceil(maxValue * 1.2);
-            
-            historyChart.options.scales.y.suggestedMax = maxValue;
-            
-            historyChart.data.labels = historicalData.timestamps;
-            historyChart.data.datasets[0].data = historicalData.pm2_5;
-            historyChart.data.datasets[1].data = historicalData.pm10;
-            historyChart.update();
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            const timeButtons = document.querySelectorAll('.time-btn');
-            
-            timeButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    timeButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    this.classList.add('active');
-                    
-                    const range = this.dataset.range;
-                    let maxPoints = 150;
-                    
-                    if (range === '15m') {
-                        maxPoints = 450;
-                    } else if (range === '30m') {
-                        maxPoints = 900;
-                    }
-                    
-                    if (historicalData.timestamps.length > maxPoints) {
-                        const excess = historicalData.timestamps.length - maxPoints;
-                        historicalData.pm2_5 = historicalData.pm2_5.slice(excess);
-                        historicalData.pm10 = historicalData.pm10.slice(excess);
-                        historicalData.timestamps = historicalData.timestamps.slice(excess);
-                    }
-                    
-                    historyChart.data.labels = historicalData.timestamps;
-                    historyChart.data.datasets[0].data = historicalData.pm2_5;
-                    historyChart.data.datasets[1].data = historicalData.pm10;
-                    historyChart.update();
-                });
-            });
-            
-            initialize();
-        });
-
         async function connectToDevice() {
             if (connected) {
                 await disconnectFromDevice();
@@ -693,48 +723,74 @@
             }
             
             try {
-                updateStatus('Preparing to scan for devices...');
+                updateStatus('Preparing to scan...');
+                
+                // Show loading indicator except on Bluefy
+                if (!isBluefy) {
+                    loadingOverlay.style.visibility = 'visible';
+                }
+                
                 document.getElementById('deviceInfo').innerHTML = 
-                    `<div>Web Bluetooth Support Check:</div>
-                     <div>- navigator.bluetooth: ${navigator.bluetooth ? 'YES' : 'NO'}</div>
-                     <div>- requestDevice: ${navigator.bluetooth && navigator.bluetooth.requestDevice ? 'YES' : 'NO'}</div>
-                     <div>- Browser: ${navigator.userAgent}</div>`;
+                    `<div>Web Bluetooth Support: ${navigator.bluetooth ? 'YES' : 'NO'}</div>
+                     <div>Browser: ${isBluefy ? 'Bluefy Browser' : navigator.userAgent}</div>`;
+                
                 updateStatus('Scanning for devices...');
                 
-                const requestOptions = {
-                    filters: [
-                        { services: [NUS_SERVICE_UUID] },
-                        { namePrefix: 'SPS30' }
-                    ],
-                    optionalServices: [NUS_SERVICE_UUID]
-                };
+                let requestOptions;
+                
+                // Bluefy works better with simpler request options
+                if (isBluefy) {
+                    requestOptions = {
+                        filters: [
+                            { services: [NUS_SERVICE_UUID] }
+                        ],
+                        optionalServices: [NUS_SERVICE_UUID]
+                    };
+                } else {
+                    requestOptions = {
+                        filters: [
+                            { services: [NUS_SERVICE_UUID] },
+                            { namePrefix: 'SPS30' }
+                        ],
+                        optionalServices: [NUS_SERVICE_UUID]
+                    };
+                }
                 
                 console.log("Requesting device with options:", requestOptions);
                 
-                bleDevice = await navigator.bluetooth.requestDevice(requestOptions);
+                // On some Android devices/Bluefy, requestDevice() can be slow, so use a timeout
+                const devicePromise = navigator.bluetooth.requestDevice(requestOptions);
+                bleDevice = await devicePromise;
+                
+                // Hide loading overlay
+                loadingOverlay.style.visibility = 'hidden';
                 
                 document.getElementById('deviceInfo').textContent = 
-                    `Selected device: "${bleDevice.name}" (ID: ${bleDevice.id})`;
+                    `Selected device: "${bleDevice.name || 'Unnamed Device'}" (ID: ${bleDevice.id})`;
                 
                 bleDevice.addEventListener('gattserverdisconnected', handleDisconnection);
                 
-                updateStatus('Connecting to ' + bleDevice.name + '...');
+                updateStatus('Connecting...');
                 
-                const server = await connectWithRetry(bleDevice);
+                // For Bluefy, don't use retries as it handles its own reconnection
+                const server = isBluefy ? 
+                    await bleDevice.gatt.connect() : 
+                    await connectWithRetry(bleDevice);
                 
-                document.getElementById('deviceInfo').innerHTML = 
-                    `<div>Connected to: ${bleDevice.name}</div>
-                     <div>Device ID: ${bleDevice.id}</div>
-                     <div>Connection state: ${server.connected ? 'Connected' : 'Disconnected'}</div>`;
+                // Handle Bluefy's slower connection handshake
+                if (isBluefy) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
                 
                 updateStatus('Finding Nordic UART Service...');
                 const service = await server.getPrimaryService(NUS_SERVICE_UUID);
                 
-                updateStatus('Getting UART characteristics...');
+                updateStatus('Getting characteristics...');
                 nusTxCharacteristic = await service.getCharacteristic(NUS_TX_UUID);
                 nusRxCharacteristic = await service.getCharacteristic(NUS_RX_UUID);
                 
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Bluefy needs a longer delay before enabling notifications
+                await new Promise(resolve => setTimeout(resolve, isBluefy ? 2000 : 1000));
                 
                 updateStatus('Enabling notifications...');
                 await nusTxCharacteristic.startNotifications();
@@ -742,32 +798,39 @@
                 
                 connected = true;
                 updateConnectionUI(true);
-                updateStatus('Connected to ' + bleDevice.name);
+                updateStatus('Connected to ' + (bleDevice.name || 'device'));
                 
+                // Send info command after a delay
                 setTimeout(() => {
                     sendCommand('info');
-                }, 2000);
+                }, isBluefy ? 3000 : 2000);
                 
             } catch (error) {
+                // Hide loading overlay
+                loadingOverlay.style.visibility = 'hidden';
+                
                 console.error('Connection error:', error);
                 
                 let errorMessage = error.message;
-                if (error.message.includes('User cancelled')) {
+                
+                // Bluefy-specific error handling
+                if (isBluefy && error.message.includes('User cancelled')) {
+                    errorMessage = 'Device selection cancelled in Bluefy';
+                } else if (error.message.includes('User cancelled')) {
                     errorMessage = 'Device selection cancelled';
                 } else if (error.message.includes('GATT operation failed')) {
-                    errorMessage = 'GATT connection failed - try refreshing the page and reconnecting';
+                    errorMessage = 'GATT connection failed - try again';
                 }
                 
                 updateStatus('Connection failed: ' + errorMessage);
                 document.getElementById('deviceInfo').innerHTML += 
                     `<div style="color:red">Error: ${errorMessage}</div>
-                     <div>If the device doesn't appear in the Bluetooth list, try these steps:</div>
+                     <div>Troubleshooting steps:</div>
                      <ol>
-                       <li>Ensure the device is powered on and in range</li>
+                       <li>Ensure device is powered on and in range</li>
                        <li>Restart the device</li>
-                       <li>Refresh this page and try again</li>
-                       <li>Check browser permissions</li>
-                       <li>Try using Chrome or Edge browser</li>
+                       <li>${isBluefy ? 'Close and reopen Bluefy' : 'Refresh this page and try again'}</li>
+                       <li>Check permissions</li>
                      </ol>`;
                      
                 updateConnectionUI(false);
@@ -874,12 +937,18 @@
             }
             
             try {
-                updateStatus(`Sending command: ${command}...`);
+                updateStatus(`Sending: ${command}...`);
                 
                 const encoder = new TextEncoder();
                 const data = encoder.encode(command);
                 
-                await nusRxCharacteristic.writeValue(data);
+                // Bluefy might need WriteWithoutResponse for more reliable operation
+                if (isBluefy && nusRxCharacteristic.properties.writeWithoutResponse) {
+                    await nusRxCharacteristic.writeValueWithoutResponse(data);
+                } else {
+                    await nusRxCharacteristic.writeValue(data);
+                }
+                
                 updateStatus(`Command sent: ${command}`);
             } catch (error) {
                 console.error('Error sending command:', error);
