@@ -69,10 +69,10 @@ const CONFIG = {
             max: 25,            // Lowered max value to make even low readings more visible
             minOpacity: 0.5,    // Set a minimum opacity to ensure visibility
             gradient: {
-                0.7: 'rgba(0, 255, 0, 0.7)',   // Low pollution (more opaque green)
-                2.6: 'rgba(255, 255, 0, 0.8)', // Medium pollution (more opaque yellow)
-                5.0: 'rgba(255, 128, 0, 0.9)', // High-medium pollution (orange)
-                8.0: 'rgba(255, 0, 0, 1.0)'    // High pollution (fully opaque red)
+                '0.0': 'rgba(0, 255, 0, 0.7)',   // Low pollution (more opaque green)
+                '0.3': 'rgba(255, 255, 0, 0.8)', // Medium pollution (more opaque yellow)
+                '0.7': 'rgba(255, 128, 0, 0.9)', // High-medium pollution (orange)
+                '1.0': 'rgba(255, 0, 0, 1.0)'    // High pollution (fully opaque red)
             }
         },
         
