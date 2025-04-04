@@ -67,12 +67,12 @@ const CONFIG = {
             blur: 25,           // Increased blur for smoother appearance
             maxZoom: 17,
             max: 25,            // Lowered max value to make even low readings more visible
-            minOpacity: 0.5,    // Set a minimum opacity to ensure visibility
+            minOpacity: 1.0,    // Set a minimum opacity to ensure visibility
             gradient: {
-                '0.0': 'rgba(0, 255, 0, 0.7)',   // Low pollution (more opaque green)
-                '0.3': 'rgba(255, 255, 0, 0.8)', // Medium pollution (more opaque yellow)
-                '0.7': 'rgba(255, 128, 0, 0.9)', // High-medium pollution (orange)
-                '1.0': 'rgba(255, 0, 0, 1.0)'    // High pollution (fully opaque red)
+                0.0: 'rgba(0, 255, 0, 0.7)',   // Low pollution (more opaque green)
+                0.3: 'rgba(255, 255, 0, 0.8)', // Medium pollution (more opaque yellow)
+                0.7: 'rgba(255, 128, 0, 0.9)', // High-medium pollution (orange)
+                1.0: 'rgba(255, 0, 0, 1.0)'    // High pollution (fully opaque red)
             }
         },
         
@@ -88,14 +88,14 @@ const CONFIG = {
     // Thresholds for air quality indicators
     airQuality: {
         pm25: {
-            good: 12,      // WHO guideline
-            moderate: 35,  // Between good and unhealthy
-            unhealthy: 150 // Poor air quality
+            good: 1,      // WHO guideline
+            moderate: 3,  // Between good and unhealthy
+            unhealthy: 10 // Poor air quality
         },
         pm10: {
-            good: 54,      // WHO guideline adjusted
-            moderate: 154, // Between good and unhealthy
-            unhealthy: 350 // Poor air quality
+            good: 1,      // WHO guideline adjusted
+            moderate: 3, // Between good and unhealthy
+            unhealthy: 10 // Poor air quality
         }
     },
     
