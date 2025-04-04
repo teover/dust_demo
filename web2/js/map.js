@@ -270,7 +270,14 @@ class MapManager {
         
         // Add the data point with intensity
         const [lat, lng] = this.currentPosition;
-        this.heatmapData.push([lat, lng, intensity]);
+        
+        // Create a small random offset (± 0.0005 degrees, roughly 50m) to prevent 
+        // all points from stacking exactly on top of each other
+        const jitterLat = lat + (Math.random() * 0.001 - 0.0005);
+        const jitterLng = lng + (Math.random() * 0.001 - 0.0005);
+        
+        // Add to heatmap data with slightly randomized location
+        this.heatmapData.push([jitterLat, jitterLng, intensity]);
         
         // Update the heatmap layer
         this.heatLayer.setLatLngs(this.heatmapData);
@@ -278,7 +285,56 @@ class MapManager {
         // Update data points counter
         this.mapDataPoints.textContent = `${this.heatmapData.length} data points`;
         
-        console.log(`Added heatmap point at [${lat}, ${lng}] with intensity ${intensity}`);
+        // Add a temporary marker to show where data was recorded
+        this.showTemporaryMarker(lat, lng, intensity);
+        
+        console.log(`Added heatmap point at [${jitterLat}, ${jitterLng}] with intensity ${intensity}`);
+    }
+    
+    /**
+     * Show a temporary marker when data point is added
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {number} intensity - Intensity value (PM2.5)
+     */
+    showTemporaryMarker(lat, lng, intensity) {
+        // Create a circle marker with color based on intensity
+        let color = 'green';
+        if (intensity > 12) color = 'yellow';
+        if (intensity > 35) color = 'orange';
+        if (intensity > 55) color = 'red';
+        
+        const marker = L.circleMarker([lat, lng], {
+            radius: 10,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.8,
+            weight: 2
+        }).addTo(this.map);
+        
+        // Add a tooltip showing the value
+        marker.bindTooltip(`PM2.5: ${intensity.toFixed(1)}`, { 
+            permanent: true,
+            direction: 'top',
+            className: 'data-tooltip'
+        }).openTooltip();
+        
+        // Create a pulse animation effect
+        const animateMarker = () => {
+            marker.setRadius(10);
+            setTimeout(() => marker.setRadius(15), 200);
+            setTimeout(() => marker.setRadius(10), 400);
+        };
+        
+        // Animate the marker a few times
+        animateMarker();
+        const pulseInterval = setInterval(animateMarker, 600);
+        
+        // Remove the marker after a few seconds
+        setTimeout(() => {
+            clearInterval(pulseInterval);
+            this.map.removeLayer(marker);
+        }, 5000);
     }
     
     /**

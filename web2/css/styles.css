@@ -362,6 +362,47 @@ body {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
+/* Position marker */
+.position-marker-inner {
+    width: 12px;
+    height: 12px;
+    background-color: #007bff;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+    position: relative;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+    }
+}
+
+/* Data point tooltips */
+.data-tooltip {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: none;
+    border-radius: 4px;
+    padding: 5px 8px;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.data-tooltip:before {
+    border-top-color: rgba(0, 0, 0, 0.8);
+}
+
 .heatmap-legend {
     position: absolute;
     bottom: 20px;

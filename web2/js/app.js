@@ -146,14 +146,15 @@ class App {
                 mapManager.addDataPoint(this.lastReadings);
             }
             
-            // Then set up periodic updates
+            // Then set up periodic updates with shorter interval for better visualization
+            // Use a shorter interval (3000ms) than the GPS watch interval for more frequent updates
             this.heatmapUpdateTimer = setInterval(() => {
                 if (this.lastReadings && mapManager.isGPSActive()) {
                     mapManager.addDataPoint(this.lastReadings);
                 }
-            }, CONFIG.map.gps.watchInterval);
+            }, 3000); // Update every 3 seconds for more visible data points
             
-            console.log('Heatmap updates started');
+            console.log('Heatmap updates started with 3-second interval');
         }
     }
     

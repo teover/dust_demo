@@ -63,14 +63,16 @@ const CONFIG = {
         
         // Heatmap configuration
         heatmap: {
-            radius: 20,
-            blur: 15,
+            radius: 35,         // Increased radius to make points more visible
+            blur: 25,           // Increased blur for smoother appearance
             maxZoom: 17,
-            max: 50, // Max value for intensity (based on PM2.5)
+            max: 25,            // Lowered max value to make even low readings more visible
+            minOpacity: 0.5,    // Set a minimum opacity to ensure visibility
             gradient: {
-                0.0: 'green',  // Low pollution
-                0.5: 'yellow', // Medium pollution
-                1.0: 'red'     // High pollution
+                0.7: 'rgba(0, 255, 0, 0.7)',   // Low pollution (more opaque green)
+                2.6: 'rgba(255, 255, 0, 0.8)', // Medium pollution (more opaque yellow)
+                5.0: 'rgba(255, 128, 0, 0.9)', // High-medium pollution (orange)
+                8.0: 'rgba(255, 0, 0, 1.0)'    // High pollution (fully opaque red)
             }
         },
         
