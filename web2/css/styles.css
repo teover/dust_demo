@@ -345,6 +345,38 @@ body {
     color: #7f8c8d;
 }
 
+.map-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+/* Save notification */
+.save-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background-color: rgba(46, 204, 113, 0.9);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1100;
+    display: none;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.save-notification.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.save-notification i {
+    margin-right: 8px;
+}
+
 /* GPS toggle button */
 #gpsToggleButton.active {
     background-color: var(--primary-color);

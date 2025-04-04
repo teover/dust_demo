@@ -15,6 +15,12 @@ class MapManager {
         this.heatmapData = [];
         this.currentPosition = null;
         
+        // Local storage key
+        this.STORAGE_KEY = 'vimms_dust_heatmap_data';
+        
+        // Auto-save timer
+        this.saveTimer = null;
+        
         // GPS tracking
         this.watchId = null;
         this.isTracking = false;
@@ -29,6 +35,12 @@ class MapManager {
         
         // Initialize the map
         this.init();
+        
+        // Set up auto-save
+        this.setupAutoSave();
+        
+        // Load any saved data
+        this.loadFromStorage();
     }
     
     /**
@@ -70,6 +82,20 @@ class MapManager {
         // Add event listeners
         this.gpsToggleButton.addEventListener('click', () => this.toggleGPS());
         this.clearMapButton.addEventListener('click', () => this.clearHeatmap());
+        
+        // Add event listener for the save button
+        const saveMapButton = document.getElementById('saveMapButton');
+        if (saveMapButton) {
+            saveMapButton.addEventListener('click', () => {
+                if (this.saveHeatmap()) {
+                    // Show success message or animation
+                    console.log("Map data manually saved");
+                } else {
+                    // Show no data message
+                    alert("No heatmap data to save.");
+                }
+            });
+        }
         
         // Make map responsive to container size changes
         window.addEventListener('resize', this.handleResize.bind(this));
@@ -344,7 +370,28 @@ class MapManager {
         this.heatmapData = [];
         this.heatLayer.setLatLngs([]);
         this.mapDataPoints.textContent = '0 data points';
-        console.log("Heatmap cleared");
+        
+        // Also clear data from local storage
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+            console.log("Heatmap cleared from UI and local storage");
+        } catch (error) {
+            console.error('Error clearing heatmap data from storage:', error);
+        }
+    }
+    
+    /**
+     * Manually save current heatmap data
+     * This can be triggered by a UI button
+     */
+    saveHeatmap() {
+        if (this.heatmapData.length > 0) {
+            this.saveToStorage();
+            return true;
+        } else {
+            console.log("No heatmap data to save");
+            return false;
+        }
     }
     
     /**
@@ -353,6 +400,112 @@ class MapManager {
      */
     isGPSActive() {
         return this.isTracking;
+    }
+    
+    /**
+     * Set up auto-save functionality
+     * Saves heatmap data to local storage every 30 seconds
+     */
+    setupAutoSave() {
+        // Clear any existing timer
+        if (this.saveTimer) {
+            clearInterval(this.saveTimer);
+        }
+        
+        // Set up a new auto-save interval
+        this.saveTimer = setInterval(() => {
+            if (this.heatmapData.length > 0) {
+                this.saveToStorage();
+            }
+        }, 30000); // Save every 30 seconds
+        
+        // Also save when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            if (this.heatmapData.length > 0) {
+                this.saveToStorage();
+            }
+        });
+    }
+    
+    /**
+     * Save heatmap data to local storage
+     */
+    saveToStorage() {
+        try {
+            // Convert data to JSON string and save
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.heatmapData));
+            console.log(`Saved ${this.heatmapData.length} heatmap points to local storage`);
+            
+            // Add a notification to the UI
+            this.showSaveNotification();
+        } catch (error) {
+            console.error('Error saving heatmap data to storage:', error);
+        }
+    }
+    
+    /**
+     * Load heatmap data from local storage
+     */
+    loadFromStorage() {
+        try {
+            // Get data from storage
+            const storedData = localStorage.getItem(this.STORAGE_KEY);
+            
+            if (storedData) {
+                // Parse the data
+                this.heatmapData = JSON.parse(storedData);
+                
+                // Update the heatmap layer
+                this.heatLayer.setLatLngs(this.heatmapData);
+                
+                // Update data points counter
+                this.mapDataPoints.textContent = `${this.heatmapData.length} data points`;
+                
+                console.log(`Loaded ${this.heatmapData.length} heatmap points from local storage`);
+                
+                // If we have data, fit the map to show all points
+                if (this.heatmapData.length > 0) {
+                    // Extract lat/lng points without intensity
+                    const points = this.heatmapData.map(point => [point[0], point[1]]);
+                    
+                    // Create a bounds object and fit the map to it
+                    const bounds = L.latLngBounds(points);
+                    this.map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading heatmap data from storage:', error);
+        }
+    }
+    
+    /**
+     * Show a temporary save notification
+     */
+    showSaveNotification() {
+        // Create a notification element if it doesn't exist
+        let notification = document.getElementById('save-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'save-notification';
+            notification.className = 'save-notification';
+            document.body.appendChild(notification);
+        }
+        
+        // Set the notification message
+        notification.innerHTML = `<i class="bi bi-cloud-check"></i> Heatmap saved (${this.heatmapData.length} points)`;
+        notification.style.display = 'block';
+        
+        // Add animation
+        notification.classList.add('show');
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 500);
+        }, 3000);
     }
 }
 
